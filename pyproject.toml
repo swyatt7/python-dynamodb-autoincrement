@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "dynamodb-autoincrement"
+version = "0.1.0"
+description = "Use optimistic locking to put DynamoDB records with auto-incrementing attributes. Python port of https://github.com/nasa-gcn/dynamodb-autoincrement"
+authors = ["Leo Singer <leo.p.singer@nasa.gov>"]
+license = "Apache-2.0"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+boto3 = {git = "https://github.com/lpsinger/boto3", rev = "dynamodb-resource-transact-write-items"}
+boto3-stubs = {extras = ["dynamodb"], version = "^1.34.35"}
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.2.1"
+mypy = "^1.8.0"
+pytest = "^8.0.0"
+pytest-dynamodb = "^2.2.3"
+pytest-cov = "^4.1.0"
+
+[tool.coverage.run]
+omit = [
+    "*/tests/*",
+]
+
+[tool.coverage.report]
+exclude_also = [
+    "@abstractmethod"
+]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
