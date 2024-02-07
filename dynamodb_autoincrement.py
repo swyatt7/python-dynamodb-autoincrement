@@ -1,3 +1,7 @@
+# Copyright © 2023 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Iterable, Optional, Mapping, Sequence, Union
