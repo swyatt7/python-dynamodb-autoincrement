@@ -1,4 +1,3 @@
-[![PyPI](https://img.shields.io/pypi/v/dynamodb-autoincrement)](https://pypi.org/project/dynamodb-autoincrement/)
 [![codecov](https://codecov.io/gh/nasa-gcn/python-dynamodb-autoincrement/graph/badge.svg?token=ezsMkImff0)](https://codecov.io/gh/nasa-gcn/python-dynamodb-autoincrement)
 
 # python-dynamodb-autoincrement
