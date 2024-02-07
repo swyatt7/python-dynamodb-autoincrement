@@ -9,6 +9,9 @@ from decimal import Decimal
 
 from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource
 
+# FIXME: remove instances of 'type: ignore[attr-defined]' below once
+# boto3-missing becomes unnecessary.
+
 
 PrimitiveDynamoDBValues = Optional[Union[str, int, float, Decimal, bool]]
 DynamoDBValues = Union[
@@ -33,18 +36,6 @@ class BaseDynamoDBAutoIncrement(ABC):
     def next(self, item: DynamoDBItem) -> tuple[Iterable[dict[str, Any]], str]:
         raise NotImplementedError
 
-    def _put_item(self, *, TableName, **kwargs):
-        # FIXME: DynamoDB resource does not have put_item method; emulate it
-        self.dynamodb.Table(TableName).put_item(**kwargs)
-
-    def _get_item(self, *, TableName, **kwargs):
-        # FIXME: DynamoDB resource does not have get_item method; emulate it
-        return self.dynamodb.Table(TableName).get_item(**kwargs)
-
-    def _query(self, *, TableName, **kwargs):
-        # FIXME: DynamoDB resource does not have put_item method; emulate it
-        return self.dynamodb.Table(TableName).query(**kwargs)
-
     def put(self, item: DynamoDBItem):
         TransactionCanceledException = (
             self.dynamodb.meta.client.exceptions.TransactionCanceledException
@@ -53,11 +44,9 @@ class BaseDynamoDBAutoIncrement(ABC):
             puts, next_counter = self.next(item)
             if self.dangerously:
                 for put in puts:
-                    self._put_item(**put)
+                    self.dynamodb.put_item(**put)  # type: ignore[attr-defined]
             else:
                 try:
-                    # FIXME: depends on an unmerged PR for boto3.
-                    # See https://github.com/boto/boto3/pull/4010
                     self.dynamodb.transact_write_items(  # type: ignore[attr-defined]
                         TransactItems=[{"Put": put} for put in puts]
                     )
@@ -69,7 +58,7 @@ class BaseDynamoDBAutoIncrement(ABC):
 class DynamoDBAutoIncrement(BaseDynamoDBAutoIncrement):
     def next(self, item):
         counter = (
-            self._get_item(
+            self.dynamodb.get_item(
                 AttributesToGet=[self.attribute_name],
                 Key=self.counter_table_key,
                 TableName=self.counter_table_name,
@@ -117,7 +106,7 @@ class DynamoDBAutoIncrement(BaseDynamoDBAutoIncrement):
 
 class DynamoDBHistoryAutoIncrement(BaseDynamoDBAutoIncrement):
     def list(self) -> list[int]:
-        result = self._query(
+        result = self.dynamodb.query(  # type: ignore[attr-defined]
             TableName=self.table_name,
             ExpressionAttributeNames={
                 **{f"#{i}": key for i, key in enumerate(self.counter_table_key.keys())},
@@ -145,10 +134,10 @@ class DynamoDBHistoryAutoIncrement(BaseDynamoDBAutoIncrement):
                 "TableName": self.table_name,
                 "Key": {**self.counter_table_key, self.attribute_name: version},
             }
-        return self._get_item(**kwargs).get("Item")
+        return self.dynamodb.get_item(**kwargs).get("Item")  # type: ignore[attr-defined]
 
     def next(self, item):
-        existing_item = self._get_item(
+        existing_item = self.dynamodb.get_item(
             TableName=self.counter_table_name,
             Key=self.counter_table_key,
         ).get("Item")

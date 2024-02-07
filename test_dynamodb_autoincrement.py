@@ -91,19 +91,20 @@ def test_autoincrement_safely(autoincrement_safely, dynamodb, last_id):
     if last_id is None:
         next_id = 1
     else:
-        dynamodb.Table("autoincrement").put_item(
-            Item={"tableName": "widgets", "widgetID": last_id}
+        dynamodb.put_item(
+            TableName="autoincrement",
+            Item={"tableName": "widgets", "widgetID": last_id},
         )
         next_id = last_id + 1
 
     result = autoincrement_safely.put({"widgetName": "runcible spoon"})
     assert result == next_id
 
-    assert dynamodb.Table("widgets").scan()["Items"] == [
+    assert dynamodb.scan(TableName="widgets")["Items"] == [
         {"widgetID": next_id, "widgetName": "runcible spoon"},
     ]
 
-    assert dynamodb.Table("autoincrement").scan()["Items"] == [
+    assert dynamodb.scan(TableName="autoincrement")["Items"] == [
         {
             "tableName": "widgets",
             "widgetID": next_id,
@@ -152,7 +153,7 @@ def test_autoincrement_dangerously_fails_on_many_parallel_puts(
 @pytest.fixture(params=[None, {"widgetID": 1}, {"widgetID": 1, "version": 1}])
 def initial_item(request, create_tables, dynamodb):
     if request.param is not None:
-        dynamodb.Table("widgets").put_item(Item=request.param)
+        dynamodb.put_item(TableName="widgets", Item=request.param)
     return request.param
 
 
@@ -174,7 +175,7 @@ def test_autoincrement_version(
     )
     assert new_version == 1 + has_initial_item
 
-    history_items = dynamodb.Table("widgetHistory").query(
+    history_items = dynamodb.query(
         TableName="widgetHistory",
         KeyConditionExpression="widgetID = :widgetID",
         ExpressionAttributeValues={
