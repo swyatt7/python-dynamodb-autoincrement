@@ -42,6 +42,7 @@ class BaseDynamoDBAutoIncrement(ABC):
         return self.dynamodb.Table(TableName).get_item(**kwargs)
 
     def _query(self, *, TableName, **kwargs):
+        # FIXME: DynamoDB resource does not have put_item method; emulate it
         return self.dynamodb.Table(TableName).query(**kwargs)
 
     def put(self, item: DynamoDBItem):
