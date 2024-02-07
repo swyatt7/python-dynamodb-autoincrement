@@ -22,25 +22,23 @@ jobs:
         with:
           args: format --check
 
-      - uses: actions/setup-python@v5
+      - name: Install Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - id: install-dynamodb
-        name: Install DynamoDB
+      - name: Install DynamoDB
+        id: install-dynamodb
         uses: ./.github/actions/install-dynamodb
 
-      - name: Install Poetry
-        run: pipx install poetry
+      - name: Install Package
+        run: pip install pytest-cov -e .[test]
 
-      - name: Install Dependencies
-        run: poetry install --all-extras
-
-      - name: Pytest
-        run: poetry run pytest --dynamodb-dir=${{ steps.install-dynamodb.outputs.dynamodb-dir }} --cov --cov-report=xml
-
-      - name: MyPy
-        run: poetry run mypy .
+      - name: Run Tests
+        run: pytest --dynamodb-dir=${{ steps.install-dynamodb.outputs.dynamodb-dir }} --cov --cov-report=xml
 
       - name: Upload to Codecov.io
         uses: codecov/codecov-action@v3
+
+      - name: Check Types
+        run: pip install mypy && mypy .
