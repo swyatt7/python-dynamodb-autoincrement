@@ -55,7 +55,7 @@ class BaseDynamoDBAutoIncrement(ABC):
                     self._put_item(**put)
             else:
                 try:
-                    # FIXME: depends on unreleased code in boto3.
+                    # FIXME: depends on an unmerged PR for boto3.
                     # See https://github.com/boto/boto3/pull/4010
                     self.dynamodb.transact_write_items(  # type: ignore[attr-defined]
                         TransactItems=[{"Put": put} for put in puts]
