@@ -1,10 +1,18 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable, Optional, Mapping, Sequence, Union
+from decimal import Decimal
 
 from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource
 
-from .types import DynamoDBItem
+
+PrimitiveDynamoDBValues = Optional[Union[str, int, float, Decimal, bool]]
+DynamoDBValues = Union[
+    PrimitiveDynamoDBValues,
+    Mapping[str, PrimitiveDynamoDBValues],
+    Sequence[PrimitiveDynamoDBValues],
+]
+DynamoDBItem = Mapping[str, DynamoDBValues]
 
 
 @dataclass(frozen=True)

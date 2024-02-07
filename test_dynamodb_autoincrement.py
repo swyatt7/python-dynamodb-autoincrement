@@ -2,10 +2,45 @@ from concurrent.futures import ThreadPoolExecutor
 from botocore.exceptions import ClientError
 import pytest
 
-from .. import DynamoDBAutoIncrement, DynamoDBHistoryAutoIncrement
+from dynamodb_autoincrement import DynamoDBAutoIncrement, DynamoDBHistoryAutoIncrement
 
 
 N = 20
+
+
+@pytest.fixture
+def create_tables(dynamodb):
+    for kwargs in [
+        {
+            "AttributeDefinitions": [
+                {"AttributeName": "tableName", "AttributeType": "S"}
+            ],
+            "BillingMode": "PAY_PER_REQUEST",
+            "KeySchema": [{"AttributeName": "tableName", "KeyType": "HASH"}],
+            "TableName": "autoincrement",
+        },
+        {
+            "BillingMode": "PAY_PER_REQUEST",
+            "AttributeDefinitions": [
+                {"AttributeName": "widgetID", "AttributeType": "N"}
+            ],
+            "KeySchema": [{"AttributeName": "widgetID", "KeyType": "HASH"}],
+            "TableName": "widgets",
+        },
+        {
+            "BillingMode": "PAY_PER_REQUEST",
+            "AttributeDefinitions": [
+                {"AttributeName": "widgetID", "AttributeType": "N"},
+                {"AttributeName": "version", "AttributeType": "N"},
+            ],
+            "KeySchema": [
+                {"AttributeName": "widgetID", "KeyType": "HASH"},
+                {"AttributeName": "version", "KeyType": "RANGE"},
+            ],
+            "TableName": "widgetHistory",
+        },
+    ]:
+        dynamodb.create_table(**kwargs)
 
 
 @pytest.fixture
