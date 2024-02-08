@@ -16,9 +16,9 @@ classifiers = [
     "Topic :: Database",
 ]
 dependencies = [
-    "boto3",
+    "aioboto3",
     "boto3-missing",
-    "boto3-stubs[dynamodb]",
+    "types-aioboto3[dynamodb]",
 ]
 requires-python = ">=3.9"
 dynamic = [ "version" ]
@@ -26,7 +26,7 @@ dynamic = [ "version" ]
 [project.optional-dependencies]
 test = [
     "pytest",
-    "pytest-dynamodb",
+    "pytest-dynamodb @ git+https://github.com/lpsinger/pytest-dynamodb@aioboto3",
 ]
 
 [project.urls]

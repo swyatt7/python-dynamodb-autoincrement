@@ -2,12 +2,13 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 
+import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Iterable, Optional, Mapping, Sequence, Union
 from decimal import Decimal
 
-from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource
+from types_aiobotocore_dynamodb.service_resource import DynamoDBServiceResource
 
 # FIXME: remove instances of 'type: ignore[attr-defined]' below once
 # boto3-missing becomes unnecessary.
@@ -33,21 +34,20 @@ class BaseDynamoDBAutoIncrement(ABC):
     dangerously: bool = False
 
     @abstractmethod
-    def next(self, item: DynamoDBItem) -> tuple[Iterable[dict[str, Any]], str]:
+    async def next(self, item: DynamoDBItem) -> tuple[Iterable[dict[str, Any]], str]:
         raise NotImplementedError
 
-    def put(self, item: DynamoDBItem):
+    async def put(self, item: DynamoDBItem):
         TransactionCanceledException = (
             self.dynamodb.meta.client.exceptions.TransactionCanceledException
         )
         while True:
-            puts, next_counter = self.next(item)
+            puts, next_counter = await self.next(item)
             if self.dangerously:
-                for put in puts:
-                    self.dynamodb.put_item(**put)  # type: ignore[attr-defined]
+                await asyncio.gather(*(self.dynamodb.put_item(**put) for put in puts))  # type: ignore[attr-defined]
             else:
                 try:
-                    self.dynamodb.transact_write_items(  # type: ignore[attr-defined]
+                    await self.dynamodb.transact_write_items(  # type: ignore[attr-defined]
                         TransactItems=[{"Put": put} for put in puts]
                     )
                 except TransactionCanceledException:
@@ -56,12 +56,14 @@ class BaseDynamoDBAutoIncrement(ABC):
 
 
 class DynamoDBAutoIncrement(BaseDynamoDBAutoIncrement):
-    def next(self, item):
+    async def next(self, item):
         counter = (
-            self.dynamodb.get_item(
-                AttributesToGet=[self.attribute_name],
-                Key=self.counter_table_key,
-                TableName=self.counter_table_name,
+            (
+                await self.dynamodb.get_item(
+                    AttributesToGet=[self.attribute_name],
+                    Key=self.counter_table_key,
+                    TableName=self.counter_table_name,
+                )
             )
             .get("Item", {})
             .get(self.attribute_name)
@@ -105,8 +107,8 @@ class DynamoDBAutoIncrement(BaseDynamoDBAutoIncrement):
 
 
 class DynamoDBHistoryAutoIncrement(BaseDynamoDBAutoIncrement):
-    def list(self) -> list[int]:
-        result = self.dynamodb.query(  # type: ignore[attr-defined]
+    async def list(self) -> list[int]:
+        result = await self.dynamodb.query(  # type: ignore[attr-defined]
             TableName=self.table_name,
             ExpressionAttributeNames={
                 **{f"#{i}": key for i, key in enumerate(self.counter_table_key.keys())},
@@ -123,7 +125,7 @@ class DynamoDBHistoryAutoIncrement(BaseDynamoDBAutoIncrement):
         )
         return sorted(item[self.attribute_name] for item in result["Items"])
 
-    def get(self, version: Optional[int] = None) -> DynamoDBItem:
+    async def get(self, version: Optional[int] = None) -> DynamoDBItem:
         if version is None:
             kwargs = {
                 "TableName": self.counter_table_name,
@@ -134,12 +136,14 @@ class DynamoDBHistoryAutoIncrement(BaseDynamoDBAutoIncrement):
                 "TableName": self.table_name,
                 "Key": {**self.counter_table_key, self.attribute_name: version},
             }
-        return self.dynamodb.get_item(**kwargs).get("Item")  # type: ignore[attr-defined]
+        return (await self.dynamodb.get_item(**kwargs)).get("Item")  # type: ignore[attr-defined]
 
-    def next(self, item):
-        existing_item = self.dynamodb.get_item(
-            TableName=self.counter_table_name,
-            Key=self.counter_table_key,
+    async def next(self, item):
+        existing_item = (
+            await self.dynamodb.get_item(
+                TableName=self.counter_table_name,
+                Key=self.counter_table_key,
+            )
         ).get("Item")
 
         counter = (
